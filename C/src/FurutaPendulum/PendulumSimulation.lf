@@ -60,101 +60,111 @@ reactor PendulumSimulation(
     state latest_u:double(0.0);
     
     timer t(0, sample_period);
-    
-    reaction(t) -> theta, d_theta, phi, d_phi {=
-        if (!self->first) {
-            // Update the state.
-            double x0_dot = self->x[1];
-            double x1_dot = 1.0/(
-                    self->alpha * self->beta
-                    + pow(self->alpha * sin(self->x[0]), 2.0)
-                    - pow(self->gamma * cos(self->x[0]), 2.0)
-                ) * (
-                    (self->alpha * self->beta + pow(self->alpha * sin(self->x[0]), 2.0))
-                    * pow(self->x[3], 2.0)
-                    * sin(self->x[0])
-                    * cos(self->x[0])
-                -
-                    pow(self->gamma * self->x[1], 2.0)
-                    * sin(self->x[0])
-                    * cos(self->x[0])
-                +
-                    2.0
-                    * self->alpha
-                    * self->gamma\
-                    * self->x[1]
-                    * self->x[3]
-                    * sin(self->x[0])
-                    * pow(cos(self->x[0]), 2.0)
-                -
-                    self->gamma
-                    * cos(self->x[0])
-                    * self->g
-                    * self->latest_u
-                + 
-                    (self->alpha * self->beta + pow(self->alpha * sin(self->x[0]), 2.0))
-                    * self->epsilon / self->alpha * sin(self->x[0])
-                );
-            double x2_dot = self->x[3];
-            double x3_dot = (1.0 / (
-                    self->alpha * self->beta 
-                    + pow(self->alpha * sin(self->x[0]), 2.0)
-                    - pow(self->gamma * cos(self->x[0]), 2.0)
-                )) * (
-                    -self->gamma
-                    * self->alpha
-                    * pow(self->x[3], 2.0)
-                    * sin(self->x[0])
-                    * pow(cos(self->x[1]), 2.0)
-                -
-                    self->gamma
-                    * self->epsilon
-                    * sin(self->x[0])
-                    * cos(self->x[0])
-                +
-                    self->gamma
-                    * self->alpha
-                    * pow(self->x[1], 2.0)
-                    * sin(self->x[0])
-                -
-                    2
-                    * pow(self->alpha, 2.0)
-                    * self->x[1]
-                    * self->x[3]
-                    * sin(self->x[0])
-                    * cos(self->x[0])
-                +
-                    self->alpha
-                    * self->g
-                    * self->latest_u
-                );
-            double sample_period = self->sample_period * 1e-9;
-            self->x[0] += x0_dot * sample_period;
-            self->x[1] += x1_dot * sample_period;
-            self->x[2] += x2_dot * sample_period;
-            self->x[3] += x3_dot * sample_period;
-        } else {
-            self->x[0] = self->initial_theta;
-            self->first = false;
-        }
-        // Output the state.
+
+    //Method that updates the state
+    method update(){=
+        double x0_dot = self->x[1];
+        double x1_dot = 1.0/(
+                self->alpha * self->beta
+                + pow(self->alpha * sin(self->x[0]), 2.0)
+                - pow(self->gamma * cos(self->x[0]), 2.0)
+            ) * (
+                (self->alpha * self->beta + pow(self->alpha * sin(self->x[0]), 2.0))
+                * pow(self->x[3], 2.0)
+                * sin(self->x[0])
+                * cos(self->x[0])
+            -
+                pow(self->gamma * self->x[1], 2.0)
+                * sin(self->x[0])
+                * cos(self->x[0])
+            +
+                2.0
+                * self->alpha
+                * self->gamma\
+                * self->x[1]
+                * self->x[3]
+                * sin(self->x[0])
+                * pow(cos(self->x[0]), 2.0)
+            -
+                self->gamma
+                * cos(self->x[0])
+                * self->g
+                * self->latest_u
+            + 
+                (self->alpha * self->beta + pow(self->alpha * sin(self->x[0]), 2.0))
+                * self->epsilon / self->alpha * sin(self->x[0])
+            );
+        double x2_dot = self->x[3];
+        double x3_dot = (1.0 / (
+                self->alpha * self->beta 
+                + pow(self->alpha * sin(self->x[0]), 2.0)
+                - pow(self->gamma * cos(self->x[0]), 2.0)
+            )) * (
+                -self->gamma
+                * self->alpha
+                * pow(self->x[3], 2.0)
+                * sin(self->x[0])
+                * pow(cos(self->x[1]), 2.0)
+            -
+                self->gamma
+                * self->epsilon
+                * sin(self->x[0])
+                * cos(self->x[0])
+            +
+                self->gamma
+                * self->alpha
+                * pow(self->x[1], 2.0)
+                * sin(self->x[0])
+            -
+                2
+                * pow(self->alpha, 2.0)
+                * self->x[1]
+                * self->x[3]
+                * sin(self->x[0])
+                * cos(self->x[0])
+            +
+                self->alpha
+                * self->g
+                * self->latest_u
+            );
+        double sample_period = self->sample_period * 1e-9;
+        self->x[0] += x0_dot * sample_period;
+        self->x[1] += x1_dot * sample_period;
+        self->x[2] += x2_dot * sample_period;
+        self->x[3] += x3_dot * sample_period;
+    =}
+
+    // Method that outputs the state.
+    method output_state(){=
         lf_set(theta, self->x[0]);
         lf_set(d_theta, self->x[1]);
         lf_set(phi, self->x[2]);
         lf_set(d_phi, self->x[3]);
     =}
+    
     reaction(d) {=
-        // NOTE: If the disturbance is coincident with a sample,
-        // then it won't have any effect on theta until the next sample.
-        // Hence, this reaction needs to be after the previous.
-        // NOTE: If the disturbance is in between samples, then
-        // we effectively shift the disturbance to be
+        // NOTE: Here, we effectively shift the disturbance to be
         // simultaneous with the next sample. A more accurate model
         // would apply the disturbance immediately.
         // The update of the state vector in the reaction below
         // should first be factored out to a method, when methods
         // are implemented in C.
+        
         self->x[1] += d->value;
+        update();
+        output_state();
+    =}
+    
+    reaction(t) -> theta, d_theta, phi, d_phi {=
+        if (!self->first) {
+            // Update the state.
+            update();
+        } else {
+            self->x[0] = self->initial_theta;
+            self->first = false;
+        }
+        // Output the state.
+        output_state();
     =}
     reaction(u) {=
         self->latest_u = u->value;
