@@ -364,9 +364,7 @@ reactor Player(width(0), height(0), image("images/Trollman.png"), character_clas
     
     reaction(pygame_event) -> bt.start, playerpause, restart {=
         if not self._pause and self._active and self._ai_control:
-            #bt.pacman_sprite.set(self.character_instance)
             bt.start.set(True)
-            #sprite.set(bt.success)
         keyboard_events = pacman.pygame.event.get()
         for event in keyboard_events:
             if event.type == pacman.pygame.QUIT:
