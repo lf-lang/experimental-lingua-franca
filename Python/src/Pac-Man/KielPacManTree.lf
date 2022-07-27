@@ -1,4 +1,13 @@
-/** PacMan Dresden Reactor **/
+/** 
+ * PacMan Dresden Reactor 
+ * This file is the implementation of support reactors 
+ *      for a new behavior tree model designed by 
+ *      Alexander Schulz-Rosengarten and Reinhard
+ *      von Hanxleden.
+ * @author Alexander Schulz-Rosengarten
+ * @author Reinhard von Hanxleden
+ * @author Benjamin Asch
+**/
 target Python{
     files: ["include/hbpacman.py", "include/AIPacSupport.py"]
 };

@@ -1,5 +1,6 @@
-### File for AI Pac-Man moves 
-# Benjamin Asch
+### File for AI Mine moves 
+# @author Benjamin Asch
+# TODO: Remove need for repeated code.
 
 import sys
 from random import randint
@@ -12,24 +13,16 @@ moves = {
             "UP": [0, -30],
             }
 
-# class Movefinders:
-    #TODO: make so doesn't look in opposite direction of past move
-    #TODO: add condition that tells whether or not should be reevaluated by pacman sprite
 def closestpillpath(layout, ghosts, x, y, blocks):
     paths = []
     def pathfinder(layout, ghosts, x, y, blocks, temp = [], search_len = 8, add_anyways = False):
         oncurrpath = False
-        #search_length = search_len
         if len(temp) < search_len:
             for name, change in possiblepacmoves(layout, ghosts, x, y).items():
                 if len(temp) < 1 or not (change[0] * -1 == temp[len(temp) - 1][0] and change[1] * -1 == temp[len(temp) - 1][1]):
                     new_x = x + change[0]
                     new_y = y + change[1]
                     for block in blocks:
-                        #print(abs(block.rect.left - x))
-                       # x_condition = x >= block.rect.left - block.rect.width - 15 and x <= block.rect.left + block.rect.width + 15
-                       # y_condition = y >= block.rect.top - block.rect.width - 15 and y <= block.rect.bottom + block.rect.width + 15
-                        #print(x_condition, y_condition)
                         other_cond = x + 16 >= block.rect.left - block.rect.width and x + 16 <= block.rect.left + block.rect.width and y + 16 >= block.rect.top - block.rect.height and y + 16 <= block.rect.top + block.rect.height
                         if other_cond:
                             temp.append(change)
@@ -42,11 +35,9 @@ def closestpillpath(layout, ghosts, x, y, blocks):
                     else:
                         pathfinder(layout, ghosts, new_x, new_y, blocks, [*temp, change], search_len, add_anyways)
         elif add_anyways:
-            #print("added anyways")
             paths.append(temp)
     pathfinder(layout, ghosts, x, y, blocks)
-    #print(paths, " is paths")
-    #print("this is paths")
+
     if len(paths) > 0:
         smallest = []
         for path in paths:
@@ -73,17 +64,14 @@ def possiblepacmoves(layout, ghosts, x, y, cond=True, moves=moves):
         add = True
         for name, change in moves.items():
             for wall in layout:
-                #print(wall)
                 wall_left = wall[0]
                 wall_right = wall_left + wall[2]
                 wall_top = wall[1]
                 wall_bottom = wall_top + wall[3]
                 new_x = x + change[0]
                 new_y = y + change[1]
-                #print(wall_top, wall_bottom, new_y)
                 condition_x = (new_x + 16 > wall_left - 20 and new_x + 16 < wall_right + 20) 
                 condition_y = (new_y + 16 > wall_top - 20 and new_y + 16 < wall_bottom + 20)
-                #print(condition_x, condition_y)
                 off_grid = new_x < 10 or new_x > 565 or new_y < 10 or new_y > 565
                 if off_grid or (condition_x and condition_y):
                     add = False
@@ -98,9 +86,9 @@ def possiblepacmoves(layout, ghosts, x, y, cond=True, moves=moves):
                 possible.update({name : change})
             else:
                 add = True
-        #print(possible, " is possible")
         return possible
-#TODO: make more efficient by stopping once length of single path htis threshold
+
+#TODO: make more efficient by stopping once length of single path hits threshold
 def closeghostdist(layout, ghosts, x, y, threshold):
     paths = []
     def ghostfinder(layout, ghosts, x, y, temp = []):
@@ -161,6 +149,7 @@ def closestghost(layout, ghosts, x, y, threshold, give_all = False):
                 mini = item
         return mini
     return paths
+
 #FIXME: does not work
 def avoider(layout, ghosts, x, y, threshold):
     paths = []
@@ -195,7 +184,6 @@ def avoider(layout, ghosts, x, y, threshold):
 def allghostavoid(layout, ghosts, x, y, threshold):
     paths = []
     def avoidfinder(layout, ghosts, x, y, threshold, temp = []):
-        #oncurrpath = False
         if len(temp) < threshold:
             for name, change in possiblepacmoves(layout, ghosts, x, y).items():
                 if len(temp) < 1 or not (change[0] * -1 == temp[len(temp) - 1][0] and change[1] * -1 == temp[len(temp) - 1][1]):

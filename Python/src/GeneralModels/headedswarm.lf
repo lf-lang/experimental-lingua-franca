@@ -1,6 +1,7 @@
-/* Swarm with head observer */
-
-/* Swarm go crazy */
+/** 
+ * Swarm with head observer meant to control other nodes 
+ * @author Benjamin Asch
+**/
 
 target Python{};
 
@@ -56,11 +57,6 @@ reactor Node(speed(100msec), index(0)) {
     output out3
     output head
     
-//    initial mode One {
-//        reaction(in4) {=
-//            Two.set()
-//        =}
-//    } mode Two {
     timer tick(0, speed)
         
     reaction(tick) -> out0, out1, out2, out3 {=
@@ -70,7 +66,6 @@ reactor Node(speed(100msec), index(0)) {
     reaction(in0, in1, in2, in3){=
             
     =}
-//    }
 }
 
 main reactor {

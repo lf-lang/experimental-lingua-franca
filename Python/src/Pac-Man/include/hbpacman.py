@@ -1,5 +1,6 @@
 #Pacman in Python with PyGame
 #https://github.com/hbokmann/Pacman
+#Additional methods added by Benjamin Asch
   
 import pygame
 import AIPacSupport as ai

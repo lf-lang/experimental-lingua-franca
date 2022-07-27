@@ -1,4 +1,7 @@
-/*Banked version of a human distributed system */
+/** 
+ * Banked version of a very simple human distributed system 
+ * @author Benjamin Asch
+**/
 
 target Python {};
 

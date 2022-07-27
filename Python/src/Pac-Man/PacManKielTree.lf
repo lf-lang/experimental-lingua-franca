@@ -1,23 +1,29 @@
  /**
- * A simple Pacman game.
+ * A simple Pacman game with Kiel BT model player AI.
  * Source: https://github.com/hbokmann/Pacman
  * LICENSE: N/A
  *
+ * @author Soroush Bateni
+ * @author Benjamin Asch
+ *
  * To run:
- * 1- lfc src/PacMan.lf
+ * 1- lfc src/PacManKielTree.lf
  * 2- Follow the instructions on the terminal.
- * S  
+ *
+ *
  * TODOs
  * 1- Add more comments.
- * 2- Show a win/lose screen instead of exiting.
- * 3- Add the ability to restart the game after win/lose.
- * 4- Make the game logic more efficient if possible.
- * 5- Add personalities for each ghost instead of following pre-determined
+ * 2- Make the game logic more efficient if possible.
+ * 3- Find way to remove additional ports and make multiport information traversal 
+ *    from reactor to reaction.
+ * 4- Add personalities for each ghost instead of following pre-determined
  *    directions.
+ * 5- Implement manual override feature available in other AI versions.
  * 6- Add modes for ghosts (exploring, chasing, running away).
- * 7- Replace the player with an AI.
+ * 7- Replace the player with an AI. (already in another version)
  * 8- Enable federated execution if possible.
  * 9- Explore:
+ *    - How to make AI more efficient?
  *    - What to do in the case of communication failure?
  *    - What are other possible fault scenarios?
  *    - What should the AI and the ghosts see? Should they be able to see all the
@@ -28,6 +34,7 @@
  *      See https://arxiv.org/abs/2109.07771 .
  *
 **/
+
 target Python {
     files: ["include/hbpacman.py", "include/images", "include/AIPacSupport.py", "KielPacManTree.lf"]
 };
@@ -90,9 +97,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
     input[5] icon_name
     input playerpause
     input restart
-    #logical action announcement
-    #logical action announcementval
-    #input controllerpause
 
     output tick
     output[5] icon
@@ -139,9 +143,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
         pacman.pygame.display.flip()
         self._clock.tick()
         tick.set(True)
-        #for event in pacman.pygame.event.get():
-         #   if event.type == pacman.pygame.VIDEORESIZE:
-          #      self._screen = pacman.pygame.display.set_mode(event.size, pacman.pygame.RESIZABLE)
     =}
 
     reaction(static_sprites) {=
@@ -177,23 +178,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
         self._static_sprites.draw(self._screen)
         self._screen.blit(self._top_corner_text, [10, 10])
     =}
-    
-    #reaction(game_over) {=
-        #self._active = False
-   # =}
-//    reaction(playerpause) {=
-//        if playerpause.is_present and self._game_over == False:
-//            w = pacman.pygame.Surface((400,200))  # the size of your rect
-//            w.set_alpha(10)                # alpha level
-//            w.fill((128,128,128))           # this fills the entire surface
-//            self._screen.blit(w, (100,200))    # (0,0) are the top-left coordinates
-//    
-//            text2=self._font.render("The game is paused.", True, pacman.white)
-//            self._screen.blit(text2, [135, 303])
-//            text3=self._font.render("To continue, hit SPACE.", True, pacman.white)
-//            self._screen.blit(text3, [165, 333])
-//            pacman.pygame.display.flip()
-//    =}
 
     reaction(playerpause) {=
         if playerpause.is_present and playerpause.value == True and self._game_over == False:
@@ -230,15 +214,9 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
             self._screen.blit(text3, [165, 333])
             pyautogui.keyUp(' ')
             pacman.pygame.display.flip()
-            
-            #for event in pacman.pygame.event.get():
-             #   if event.type == pacman.pygame.KEYDOWN:
-              #      print(1)
+
     =}
     reaction(restart) {=
-        #if restart.value:
-       #     self._active = True
-      #      pyautogui.keyUp(' ')
         self._game_over = False
     =}
 
@@ -251,7 +229,6 @@ reactor BaseCharacter(width(0), height(0), image("images/Trollman.png"), charact
     input wall_list # Receive updated wall list
     input gate_list # Receive updated gate list
     input icon
-    #input controllerpause # from controller to pause at end
 
     output sprite
     output icon_name
@@ -275,11 +252,6 @@ reactor BaseCharacter(width(0), height(0), image("images/Trollman.png"), charact
         self._wall_list = wall_list.value
         self._gate_list = gate_list.value
     =}
-    
-    # reaction to update pause from controller 
-    /**reaction(controllerpause) {=
-        self._pause = controllerpause
-    =}**/
 
 }
 
@@ -431,13 +403,7 @@ reactor Ghost (directions({=()=}), name("Stinky")) extends BaseCharacter {
     state _resetting(False)
     state _frenzy(False)
     
-    #reaction(startup) {=
-     #   self.image = "images/pacman.png"
-    #=}
-    
     reaction(playerpause) {=
-       # if controllerpause.is_present:
-       #     self._pause = controllerpause.value
        if playerpause.is_present:
            self._pause = playerpause.value
     =}
@@ -498,7 +464,6 @@ reactor GameController(number_of_ghosts(4)) {
     output score # The game score
     output game_over
     output frenzy
-    #output controllerpause 
 
     input[number_of_ghosts] ghost_sprites
     input pacman_sprite
@@ -518,34 +483,114 @@ reactor GameController(number_of_ghosts(4)) {
     state _energizer_list({=pacman.pygame.sprite.RenderPlain()=})
     state _energizer_indices({=[0, 0]=})
     state _frenzy(False)
-   # state _controllerpause({=False=}) #not necessary
    
-   # initial mode One {
-        reaction(startup) -> wall_list, gate {=
-            _all_sprites_list = pacman.pygame.sprite.RenderPlain()
-            self._wall_list = pacman.setupRoomOne(_all_sprites_list)
-            self._gate = pacman.setupGate(_all_sprites_list)
+    reaction(startup) -> wall_list, gate {=
+        _all_sprites_list = pacman.pygame.sprite.RenderPlain()
+        self._wall_list = pacman.setupRoomOne(_all_sprites_list)
+        self._gate = pacman.setupGate(_all_sprites_list)
+
+        wall_list.set(self._wall_list)
+        gate.set(self._gate)
+        
+    =}
     
-            wall_list.set(self._wall_list)
-            gate.set(self._gate)
-            
-        =}
+    reaction(pacman_sprite, init_sprite) {=
+        print("got pacman sprite")
+        if pacman_sprite.is_present:
+            self._pacman_collide.empty()
+            self._pacman_collide.add(pacman_sprite.value)
+            self._pacman_sprite = pacman_sprite.value
+        else:
+            self._pacman_collide.empty()
+            self._pacman_collide.add(init_sprite.value)
+            self._pacman_sprite = init_sprite.value
+    =}
+    
+    reaction(startup) -> block_list {=
+        # Draw the grid
         
-        reaction(pacman_sprite, init_sprite) {=
-            print("got pacman sprite")
-            if pacman_sprite.is_present:
-                self._pacman_collide.empty()
-                self._pacman_collide.add(pacman_sprite.value)
-                self._pacman_sprite = pacman_sprite.value
-            else:
-                self._pacman_collide.empty()
-                self._pacman_collide.add(init_sprite.value)
-                self._pacman_sprite = init_sprite.value
-        =}
+        for row in range(19):
+            for column in range(19):
+                if (row == 7 or row == 8) and (column == 8 or column == 9 or column == 10):
+                    continue
+                if randint(0, 361) > 358:
+                    block = pacman.Block(pacman.red, 10, 10)
+                    self._energizer_list.add(block)
+                else:
+                    block = pacman.Block(pacman.yellow, 4, 4)
+
+                # Set a random location for the block
+                block.rect.x = (30*column+6)+26
+                block.rect.y = (30*row+6)+26
+
+                b_collide = pacman.pygame.sprite.spritecollide(block, self._wall_list, False)
+                p_collide = pacman.pygame.sprite.spritecollide(block, self._pacman_collide, False)
+                
+                if b_collide:
+                    continue
+                if p_collide:
+                    continue
+                
+                # Add the block to the list of objects
+                self._block_list.add(block)
+                block_list.set(block) # Send it to be drawn
         
-        reaction(startup) -> block_list {=
-            # Draw the grid
-          
+        self._score_to_win = len(self._block_list)
+        print(self._energizer_list)
+        print(self._score_to_win)
+    =}
+
+    reaction(pacman_sprite, init_sprite) -> score, game_over, frenzy, end_frenzy {=
+        blocks_hit_list = pacman.pygame.sprite.spritecollide(self._pacman_sprite, self._block_list, True)
+        energizer_hit_list = pacman.pygame.sprite.RenderPlain()
+        #FIXME: can also make this more efficient
+        for block in blocks_hit_list:
+            if block.rect.width == 10:
+                energizer_hit_list.add(block)
+                
+        # Check the list of collisions.
+        if len(blocks_hit_list) > 0:
+            self._score +=len(blocks_hit_list)
+
+        if self._score == self._score_to_win:
+            game_over.set("Won!")
+
+        elif len(energizer_hit_list) > 0:
+            self._frenzy = True
+            print(self._frenzy)
+            frenzy.set(self._frenzy)
+            delay = randint(3, 7)
+            end_frenzy.schedule(SEC(delay))
+    
+        score.set(self._score)
+    =}
+
+    reaction(ghost_sprites) -> game_over {=
+        # FIXME: Make this more efficient.
+        monsta_list = pacman.pygame.sprite.RenderPlain()
+        for ghost in ghost_sprites:
+            if ghost.is_present:
+                monsta_list.add(ghost.value)
+        
+        monsta_hit_list = pacman.pygame.sprite.spritecollide(self._pacman_sprite, monsta_list, False)
+
+        if monsta_hit_list and not self._frenzy:
+            game_over.set("Lost!")
+        elif monsta_hit_list and self._frenzy:
+            for monsta in monsta_hit_list:
+                monsta.moveoffgrid()
+
+    =}
+
+    # Send the updated blocks
+    reaction(tick) ->  block_list {=
+        block_list.set(self._block_list)
+    =}
+        
+    reaction(restart) {=
+        if restart.value:
+            self._block_list = pacman.pygame.sprite.RenderPlain()
+            self._energizer_list = pacman.pygame.sprite.RenderPlain()
             for row in range(19):
                 for column in range(19):
                     if (row == 7 or row == 8) and (column == 8 or column == 9 or column == 10):
@@ -570,111 +615,22 @@ reactor GameController(number_of_ghosts(4)) {
                     
                     # Add the block to the list of objects
                     self._block_list.add(block)
-                    block_list.set(block) # Send it to be drawn
-            # print("Finished drawing blocks")
-            
             self._score_to_win = len(self._block_list)
             print(self._energizer_list)
-            print(self._score_to_win)
-        =}
-    
-        reaction(pacman_sprite, init_sprite) -> score, game_over, frenzy, end_frenzy {=
-            blocks_hit_list = pacman.pygame.sprite.spritecollide(self._pacman_sprite, self._block_list, True)
-            energizer_hit_list = pacman.pygame.sprite.RenderPlain()
-            #FIXME: can also make this more efficient
-            for block in blocks_hit_list:
-                if block.rect.width == 10:
-                    energizer_hit_list.add(block)
-                    
-            # Check the list of collisions.
-            if len(blocks_hit_list) > 0:
-                self._score +=len(blocks_hit_list)
-    
-            if self._score == self._score_to_win:
-                game_over.set("Won!")
-                #pyautogui.keyDown(' ')
-                #print("Won")
-                #self._controllerpause = True
-                #pause isntead of stop game
-                #controllerpause.set(True)
-                #request_stop() #remove once above finished
-            elif len(energizer_hit_list) > 0:
-                self._frenzy = True
-                print(self._frenzy)
-                frenzy.set(self._frenzy)
-                delay = randint(3, 7)
-                end_frenzy.schedule(SEC(delay))
-        
-            score.set(self._score)
-        =}
-    
-        reaction(ghost_sprites) -> game_over {=
-            # FIXME: Make this more efficient.
-            monsta_list = pacman.pygame.sprite.RenderPlain()
-            for ghost in ghost_sprites:
-                if ghost.is_present:
-                    monsta_list.add(ghost.value)
-            
-            monsta_hit_list = pacman.pygame.sprite.spritecollide(self._pacman_sprite, monsta_list, False)
-    
-            if monsta_hit_list and not self._frenzy:
-                game_over.set("Lost!")
-            elif monsta_hit_list and self._frenzy:
-                for monsta in monsta_hit_list:
-                    monsta.moveoffgrid()
-    
-        =}
-    
-        # Send the updated blocks
-        reaction(tick) ->  block_list {=
-            block_list.set(self._block_list)
-        =}
-         
-        reaction(restart) {=
-            if restart.value:
-                self._block_list = pacman.pygame.sprite.RenderPlain()
-                self._energizer_list = pacman.pygame.sprite.RenderPlain()
-                for row in range(19):
-                    for column in range(19):
-                        if (row == 7 or row == 8) and (column == 8 or column == 9 or column == 10):
-                            continue
-                        if randint(0, 361) > 358:
-                            block = pacman.Block(pacman.red, 10, 10)
-                            self._energizer_list.add(block)
-                        else:
-                            block = pacman.Block(pacman.yellow, 4, 4)
-        
-                        # Set a random location for the block
-                        block.rect.x = (30*column+6)+26
-                        block.rect.y = (30*row+6)+26
-        
-                        b_collide = pacman.pygame.sprite.spritecollide(block, self._wall_list, False)
-                        p_collide = pacman.pygame.sprite.spritecollide(block, self._pacman_collide, False)
-                        
-                        if b_collide:
-                            continue
-                        if p_collide:
-                            continue
-                        
-                        # Add the block to the list of objects
-                        self._block_list.add(block)
-                self._score_to_win = len(self._block_list)
-                print(self._energizer_list)
-                self._frenzy = False
-                self._score = 0
-        =}
-        
-        reaction(end_frenzy) -> frenzy {=
             self._frenzy = False
-            print(self._frenzy, " and times up")
-            frenzy.set(self._frenzy)
-        =}
-        
-        reaction(shutdown) {=
-            pacman.pygame.quit()
-        =}
+            self._score = 0
+    =}
+    
+    reaction(end_frenzy) -> frenzy {=
+        self._frenzy = False
+        print(self._frenzy, " and times up")
+        frenzy.set(self._frenzy)
+    =}
+    
+    reaction(shutdown) {=
+        pacman.pygame.quit()
+    =}
 
-   # }
 }
 
 main reactor {

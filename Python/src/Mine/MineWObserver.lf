@@ -1,26 +1,48 @@
  /**
- * A simple Pacman game.
- * Source: https://github.com/hbokmann/Pacman
+ * A simple mining demo.
+ * Sources: https://github.com/hbokmann/Pacman
  * LICENSE: N/A
+ * 
+ * @author Soroush Bateni
+ * @author Benjamin Asch
  *
  * To run:
- * 1- lfc src/mine.lf
+ * 1- lfc src/MineWObserver.lf
  * 2- Follow the instructions on the terminal.
- * S  
- * TODOs
+ * 
+ * General info:
+ * 1- This was an attempt to create a version of the PhosphateMine.lf
+ *      example in which the AGV has no knowledge of the locations of 
+ *      the ghosts. It is semi-functional, but there is a slight bug
+ *      that causes the AGV to make impossible moves when trying to 
+ *      avoid people.
+ *
+ * 2 - The different blocks represent different stations and
+ *      tasks for the 'autonomous ground vehicle' to complete.
+ *      Burgundy block- mining station
+ *      Blue block- washing station
+ *      Orange/yellow block- filtering station
+ *      Gray block- storing station
+ *      Green block- charging station
+ *
+ * 3 - The AGV must complete the tasks in the order specified in the reactor's 
+ *      list, while simultaneously avoiding people and battery drainage.
+ *
+ *
+ * TODOs (besides debug mentioned in 'General info (1)')
  * 1- Add more comments.
- * 2- Show a win/lose screen instead of exiting.
- * 3- Add the ability to restart the game after win/lose.
- * 4- Make the game logic more efficient if possible.
- * 5- Add personalities for each ghost instead of following pre-determined
+ * 2- Make the demo logic more efficient if possible.
+ * 3- Debug A-star search function instead of using euclidean distance.
+ * 4- Add personalities for each person instead of following pre-determined
  *    directions.
- * 6- Add modes for ghosts (exploring, chasing, running away).
- * 7- Replace the player with an AI.
- * 8- Enable federated execution if possible.
- * 9- Explore:
+ * 5- Add modes for people (exploring, chasing, running away).
+ * 6- Enable federated execution if possible.
+ * 7- Explore:
+ *    - What are better ways to optimize battery/path while still
+        avoiding people?
  *    - What to do in the case of communication failure?
  *    - What are other possible fault scenarios?
- *    - What should the AI and the ghosts see? Should they be able to see all the
+ *    - What should the AI and the people see? Should they be able to see all the
  *      walls or just walls close to them?
  *    - Add an external observer that is responsible for veryfing safety
  *      properties.
@@ -28,13 +50,13 @@
  *      See https://arxiv.org/abs/2109.07771 .
  *
 **/
+
 target Python {
     files: ["include/hbphosphate.py", "include/images", "include/AIPhosphate.py"]
 };
 
 preamble {=
     import os
-    #import pyautogui
     from random import randint
     curr_dirname = os.path.dirname(__file__)
     sys.path.append(curr_dirname)
@@ -84,9 +106,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
     input[5] icon_name
     input playerpause
     input restart
-    #logical action announcement
-    #logical action announcementval
-    #input controllerpause
 
     output tick
     output[5] icon
@@ -153,7 +172,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
 
     reaction(moving_sprites) {=
 
-        #print("adding moving sprites")
         self._screen.fill(mine.white)
         agv = mine.pygame.sprite.Sprite()
         sprite_list = mine.pygame.sprite.RenderPlain()
@@ -162,7 +180,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
                 sprite.value.draw(self._screen)
             elif isinstance(sprite.value, mine.AGV) and not isinstance(sprite.value, mine.People):
                 agv = sprite.value
-                #print("agv battery is ", agv.battery)
                 sprite_list.add(sprite.value)
             elif isinstance(sprite.value, mine.pygame.sprite.Sprite):
                 sprite_list.add(sprite.value)
@@ -355,17 +372,12 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
         =}
 
         reaction(pygame_event) -> sprite, playerpause, restart, reset(Charge_check), reset(Avoid) {=
-            print("action is ", self._action)
-            print("prev action is ", self._prev_action)
-            #print("pause is ", self._pause)
-            #print("ai control is ", self._ai_control)
             keyboard_events = mine.pygame.event.get()
             for event in keyboard_events:
                 if event.type == mine.pygame.QUIT:
                     request_stop()
                     
                 if event.type == mine.pygame.KEYDOWN:
-                    #print("detecting key down")
                     if event.key == mine.pygame.K_ESCAPE:
                         request_stop()
                     if event.key == mine.pygame.K_RETURN:
@@ -376,7 +388,6 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
                         self._action = "mining"
                         self._prev_action = "mining"
                         self.character_instance.charge("full")
-                        #print(self.character_instance.rect.left)
                     if event.key == mine.pygame.K_SPACE:
                         if self._pause is False:
                             self._pause = True
@@ -411,8 +422,6 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
                     self._wall_list,
                     self._gate_list
                 )
-            #print("setting sprite")
-            #print("battery is ", self.character_instance.battery)
             sprite.set(self.character_instance)
             playerpause.set(self._pause)
             if not self._pause and self.character_instance.battery > 0: #and self._active
@@ -438,14 +447,12 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
 
     } mode Charge_check {
         reaction(reset) -> reset(Location_check) {=
-            #print("checking charge")
             if self.character_instance.battery <= self.charge_at:
                 self._action = "charging"
             Location_check.set()
         =}
     } mode Location_check {
         reaction(reset) -> reset(charging), reset(mining), reset(washing), reset(filtering), reset(storing), reset(findspot) {=
-            #print("checking location")
             if self._action == "mining" and [self.character_instance.rect.left + 16, self.character_instance.rect.top + 16] == mine.minespot:
                 mining.set()
             elif self._action == "washing" and [self.character_instance.rect.left + 16, self.character_instance.rect.top + 16] == mine.washspot:
@@ -457,13 +464,11 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
             elif self._action == "charging" and [self.character_instance.rect.left + 16, self.character_instance.rect.top + 16] == mine.chargerspot:
                 charging.set()
             else:
-                #print("setting findspot")
                 findspot.set()
             
         =}
     } mode findspot {
         reaction(reset) -> history(export) {=
-            #print("in findspot")
             if self._action == "mining":
                 self.character_instance.approach(self._layout, self._people, mine.minespot, self._find_moves)
             elif self._action == "charging":
@@ -476,39 +481,22 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
                 self.character_instance.approach(self._layout, self._people, mine.storespot, self._find_moves)
 
             self.payCost()
-            #print("found the spot move")
             self._find_moves = self.character_instance.num_moves
             export.set()
         =}
     } mode mining {
         #implement
         reaction(reset) -> history(export) {=
-            # if self._scheduled:
-            #     scheduler.schedule(SEC(4))
-            #     self._scheduled = False
-            # print("mining rn")
-            # export.set()
-            print("in mining")
             self._scheduled = True
             self._prev_action = "mining"
             self.proceedList()
             self._action = self._event_list[0]
-            #print("ending mining, beginning wash")
             export.set()
         =}
-
-        #reaction(scheduler) -> history(export) {=
-            
-        #=}
 
     } mode washing {
 
         reaction(reset) -> history(export) {=
-            # if self._scheduled:
-            #     scheduler.schedule(SEC(3))
-            #     self._scheduled = False
-            # export.set()
-            print("in washing")
             self._scheduled = True
             self._prev_action = "washing"
             self.proceedList()
@@ -516,13 +504,8 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
             export.set()
         =}
 
-        #reaction(scheduler) -> history(export) {=
-            
-        #=}
-
     } mode charging {
         reaction(reset) -> history(export) {=
-            print("in charging")
             if self.character_instance.battery < 100:
                 self.character_instance.charge(1)
             else:
@@ -531,11 +514,6 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
         =}
     } mode filtering {
         reaction(reset) -> history(export) {=
-            # if self._scheduled:
-            #     scheduler.schedule(SEC(4))
-            #     self._scheduled = False
-            # export.set()
-            print("in filtering")
             self._scheduled = True
             self._prev_action = "filtering"
             self.proceedList()
@@ -543,16 +521,8 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
             export.set()
         =}
 
-        #reaction(scheduler) -> history(export) {=
-            
-        #=}
     } mode storing {
         reaction(reset) -> history(export) {=
-            # if self._scheduled:
-            #     scheduler.schedule(SEC(4))
-            #     self._scheduled = False
-            # export.set()
-            print("in storing")
             self._scheduled = True
             self._prev_action = "storing"
             self.proceedList()
@@ -561,18 +531,13 @@ reactor AGV(width(0), height(0), image("images/Trollman.png"), character_class({
             export.set()
         =}
 
-        #reaction(scheduler) -> history(export) {=
-            
-        #=}
     } mode Avoid {
 
         reaction(reset) -> history(export) {=
-            print("avoid time")
             move = self._warned.pop()
             self.character_instance.rect.left += move[0]
             self.character_instance.rect.top += move[1]
             self.payCost()
-            #self._avoid_moves = self.character_instance.get_num_moves()
             export.set()
         =}
 
@@ -690,12 +655,6 @@ reactor GameController(number_of_people(4)) {
     =}
 
     reaction(agv_sprite) -> score, game_over {=
-        # blocks_hit_list = mine.pygame.sprite.spritecollide(self._agv_sprite, self._block_list, True)
-                
-        # Check the list of collisions.
-        #if len(blocks_hit_list) > 0:
-        #    self._score +=len(blocks_hit_list)
-
         if self._score == self._score_to_win:
             game_over.set(True)
     
@@ -721,7 +680,6 @@ reactor GameController(number_of_people(4)) {
         if restart.value:
             
             self._score_to_win = 100
-            #print(self._energizer_list)
             self._score = 0
     =}
     

@@ -125,9 +125,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
         pacman.pygame.display.flip()
         self._clock.tick()
         tick.set(True)
-        #for event in pacman.pygame.event.get():
-         #   if event.type == pacman.pygame.VIDEORESIZE:
-          #      self._screen = pacman.pygame.display.set_mode(event.size, pacman.pygame.RESIZABLE)
     =}
 
     reaction(static_sprites) {=
@@ -160,10 +157,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
         self._screen.blit(self._top_corner_text, [10, 10])
     =}
     
-    #reaction(game_over) {=
-        #self._active = False
-   # =}
-    
     reaction(pygame_tick, game_over) {= 
         #Grey background
         if game_over.is_present:
@@ -185,10 +178,6 @@ reactor Display(num_moving_sprites(0), num_static_sprites(0), nav_icon("images/p
             self._screen.blit(text3, [165, 333])
             pyautogui.keyUp(' ')
             pacman.pygame.display.flip()
-            
-            #for event in pacman.pygame.event.get():
-             #   if event.type == pacman.pygame.KEYDOWN:
-              #      print(1)
     =}
 }
 
@@ -227,11 +216,6 @@ reactor BaseCharacter(width(0), height(0), image("images/Trollman.png"), charact
     reaction(pause) {=
         self._pause = pause
     =}
-    
-    # reaction to update pause from controller 
-    /**reaction(controllerpause) {=
-        self._pause = controllerpause
-    =}**/
 
 }
 
@@ -403,13 +387,6 @@ reactor GameController(number_of_ghosts(4)) {
 
         if self._score == self._score_to_win:
             game_over.set("Won!")
-            #pyautogui.keyDown(' ')
-            #print("Won")
-            #self._controllerpause = True
-            #pause isntead of stop game
-            #controllerpause.set(True)
-            #request_stop() #remove once above finished
-            
     
         score.set(self._score)
     =}
@@ -425,13 +402,6 @@ reactor GameController(number_of_ghosts(4)) {
 
         if monsta_hit_list:
             game_over.set("Lost!")
-            #pyautogui.keyDown(' ')
-            #print("Lost")
-            #self._controllerpause = True
-            #Pause the game instead of stopping it
-            #controllerpause.set(True)
-            #request_stop() #remove once above finished
-
     =}
 
     # Send the updated blocks

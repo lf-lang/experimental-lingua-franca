@@ -1,5 +1,6 @@
 #Pacman in Python with PyGame
 #https://github.com/hbokmann/Pacman
+#Modified for mine example by Benjamin Asch
   
 import pygame
 import AIPhosphate as ai

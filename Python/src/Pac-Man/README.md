@@ -1,5 +1,5 @@
 # LF Pac-Man
-A simple adaptation of @hbokmann's [Pac-Man game](https://github.com/hbokmann/Pacman) to Lingua Franca.
+A directory containing various adaptations of @hbokmann's [Pac-Man game](https://github.com/hbokmann/Pacman) to Lingua Franca.
 
 ## Install Lingua Franca
 To install Lingua Franca, see https://docs.lf-lang.org.

@@ -1,6 +1,7 @@
-/* General Model of Reactors 
- * simulating interactions between human systems
- */
+/**
+ * General Model of Reactors simulating interactions between human systems
+ * @author Benjmain Asch
+ **/
  
  target Python {
     

@@ -1,4 +1,7 @@
-/* Model of reactors with one lead */
+/** 
+ * Model of reactors with one lead (the Queen Ant) 
+ * @author Benjamin Asch
+**/
 
 target Python;
 

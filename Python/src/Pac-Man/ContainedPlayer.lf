@@ -1,6 +1,7 @@
-/* Reactors used for contained version of 
- * player AI in PacManWFSM.lf
- */
+/** Reactors used for non-modal versions of 
+ * player AI in Pac-Man.
+ * @author Benjamin Asch
+ **/
 
 target Python {
     files: ["include/AIPacSupport.py", "include/hbpacman.py"]
